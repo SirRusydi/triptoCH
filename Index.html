@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ms" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cameron Highlands Itinerary - Custom</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&amp;family=Source+Sans+3:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    .font-heading { font-family: 'Playfair Display', serif; }
+    .font-body { font-family: 'Source Sans 3', sans-serif; }
+    .day-card { transition: all 0.3s ease; }
+    .timeline-dot { width: 12px; height: 12px; border-radius: 50%; position: relative; z-index: 2; }
+    .timeline-line { position: absolute; left: 5px; top: 12px; bottom: 0; width: 2px; }
+    .fade-in { animation: fadeIn 0.4s ease forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .tab-active { border-bottom: 3px solid #2d5016; color: #2d5016; font-weight: 700; }
+    .edit-input { width: 100%; background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px; margin-bottom: 4px; font-size: 0.875rem; }
+  </style>
+ </head>
+ <body class="h-full font-body">
+  <div id="app" class="h-full w-full overflow-auto" style="background: #f8faf5;">
+   
+   <!-- Header -->
+   <header class="relative overflow-hidden" style="background: linear-gradient(to right, #1a3a0a, #2d5016);">
+    <div class="max-w-4xl mx-auto px-6 py-10 text-center relative z-10">
+     <h1 id="mainTitle" class="font-heading text-3xl md:text-5xl text-white mb-2">Cameron Highlands Itinerary</h1>
+     <p class="text-green-100 mb-4">Penginapan: <span id="hotelName" class="font-semibold text-white">Copthorne Hotel</span></p>
+     
+     <div class="flex justify-center gap-2">
+       <button onclick="toggleEditMode()" id="editBtn" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm flex items-center gap-2 transition">
+        <i data-lucide="edit-3" style="width:16px;height:16px;"></i> <span id="editText">Ubah Itinerari</span>
+       </button>
+       <button onclick="resetItinerary()" class="bg-red-500/20 hover:bg-red-500/40 text-white px-4 py-2 rounded-full text-sm flex items-center gap-2 transition">
+        <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i> Reset
+       </button>
+     </div>
+    </div>
+   </header>
+
+   <!-- Day Tabs -->
+   <div class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-green-100">
+     <div class="max-w-4xl mx-auto px-4">
+      <div class="flex" id="tabs">
+       <button onclick="showDay(1)" class="tab-btn flex-1 py-4 text-center transition tab-active" data-day="1">🌄 Hari 1</button> 
+       <button onclick="showDay(2)" class="tab-btn flex-1 py-4 text-center transition text-gray-500" data-day="2">🌿 Hari 2</button> 
+       <button onclick="showDay(3)" class="tab-btn flex-1 py-4 text-center transition text-gray-500" data-day="3">☀️ Hari 3</button>
+      </div>
+     </div>
+   </div>
+
+   <!-- Content -->
+   <main class="max-w-4xl mx-auto px-4 py-6 pb-24" id="content"></main>
+
+   <!-- Floating Save Bar (Only in Edit Mode) -->
+   <div id="saveBar" class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 hidden z-30 shadow-lg">
+     <div class="max-w-4xl mx-auto flex justify-between items-center">
+       <p class="text-sm text-gray-600 font-medium italic">Mod Sunting Aktif: Perubahan disimpan secara automatik.</p>
+       <button onclick="toggleEditMode()" class="bg-green-700 text-white px-6 py-2 rounded-lg font-bold">Selesai</button>
+     </div>
+   </div>
+
+  </div>
+
+  <script>
+// Data asal dipertingkatkan dengan gambar Cameron Highlands yang lebih tepat
+const defaultItinerary = [
+  {
+    day: 1, title: "Hari 1 — Ketibaan & Penerokaan",
+    items: [
+      { id: '1-1', time: "07:00", type: "travel", title: "Bertolak dari KL", desc: "Perjalanan melalui Tapah atau Simpang Pulai", icon: "car", waze: "https://waze.com/ul?q=Cameron+Highlands", image: "https://images.unsplash.com/photo-1590001158193-780d0adee27b?auto=format&fit=crop&w=800&q=80" },
+      { id: '1-2', time: "11:00", type: "food", title: "Makan Tengahari @ Barracks Cafe", desc: "Kafe unik bertema tentera", icon: "utensils", waze: "https://waze.com/ul?q=Barracks+Cafe", image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80" },
+      { id: '1-3', time: "14:00", type: "visit", title: "BOH Tea Sungei Palas", desc: "Pemandangan ladang teh ikonik", icon: "leaf", waze: "https://waze.com/ul?q=BOH+Sungei+Palas", image: "https://images.unsplash.com/photo-1597485356948-436446a80486?auto=format&fit=crop&w=800&q=80" },
+      { id: '1-4', time: "16:00", type: "visit", title: "Mossy Forest", desc: "Hutan berlumut ala Jurassic Park", icon: "trees", waze: "https://waze.com/ul?q=Mossy+Forest", image: "https://images.unsplash.com/photo-1542332213-9b5a5a3fad35?auto=format&fit=crop&w=800&q=80" },
+      { id: '1-5', time: "20:00", type: "food", title: "Dinner Steamboat", desc: "Makan malam panas dalam cuaca sejuk", icon: "flame", waze: "", image: "https://images.unsplash.com/photo-1563379091339-03b21ab4a104?auto=format&fit=crop&w=800&q=80" }
+    ]
+  },
+  {
+    day: 2, title: "Hari 2 — Aktiviti Santai",
+    items: [
+      { id: '2-1', time: "09:00", type: "visit", title: "Big Red Strawberry Farm", desc: "Petik strawberi segar & makan waffle", icon: "heart", waze: "https://waze.com/ul?q=Big+Red+Strawberry", image: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=800&q=80" },
+      { id: '2-2', time: "11:30", type: "visit", title: "Cameron Lavender Garden", desc: "Taman bunga lavender yang berwarna-warni", icon: "flower-2", waze: "https://waze.com/ul?q=Cameron+Lavender+Garden", image: "https://images.unsplash.com/photo-1499002238440-d264edd596ec?auto=format&fit=crop&w=800&q=80" },
+      { id: '2-3', time: "14:00", type: "visit", title: "Pasar Kea Farm", desc: "Beli sayur, jagung mutiara & cenderamata", icon: "shopping-bag", waze: "https://waze.com/ul?q=Kea+Farm", image: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=800&q=80" },
+      { id: '2-4', time: "16:30", type: "visit", title: "The Sheep Sanctuary", desc: "Beri makan kambing biri-biri comel", icon: "info", waze: "https://waze.com/ul?q=Sheep+Sanctuary+Cameron", image: "https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&w=800&q=80" }
+    ]
+  },
+  {
+    day: 3, title: "Hari 3 — Kenangan Terakhir",
+    items: [
+      { id: '3-1', time: "09:30", type: "visit", title: "Flora Park", desc: "Taman bunga tercantik di Cameron", icon: "sun", waze: "https://waze.com/ul?q=Cameron+Flora+Park", image: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=800&q=80" },
+      { id: '3-2', time: "12:00", type: "food", title: "Makan Tengahari & Check Out", desc: "Sedia untuk pulang", icon: "log-out", waze: "", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80" }
+    ]
+  }
+];
+
+let itinerary = JSON.parse(localStorage.getItem('cameron_itinerary')) || defaultItinerary;
+let currentDay = 1;
+let isEditMode = false;
+
+function toggleEditMode() {
+  isEditMode = !isEditMode;
+  document.getElementById('saveBar').classList.toggle('hidden', !isEditMode);
+  document.getElementById('editText').textContent = isEditMode ? 'Lihat Itinerari' : 'Ubah Itinerari';
+  renderDay(currentDay);
+}
+
+function updateItem(dayNum, itemId, field, value) {
+  const day = itinerary.find(d => d.day === dayNum);
+  const item = day.items.find(i => i.id === itemId);
+  if (item) {
+    item[field] = value;
+    localStorage.setItem('cameron_itinerary', JSON.stringify(itinerary));
+  }
+}
+
+function addItem(dayNum) {
+  const day = itinerary.find(d => d.day === dayNum);
+  const newId = `${dayNum}-${Date.now()}`;
+  day.items.push({
+    id: newId,
+    time: "00:00",
+    type: "visit",
+    title: "Aktiviti Baru",
+    desc: "Klik sunting untuk ubah",
+    icon: "map-pin",
+    waze: "",
+    image: "https://images.unsplash.com/photo-1527786356703-4b100091cd2c?w=800"
+  });
+  localStorage.setItem('cameron_itinerary', JSON.stringify(itinerary));
+  renderDay(dayNum);
+}
+
+function removeItem(dayNum, itemId) {
+  if (confirm('Padam aktiviti ini?')) {
+    const day = itinerary.find(d => d.day === dayNum);
+    day.items = day.items.filter(i => i.id !== itemId);
+    localStorage.setItem('cameron_itinerary', JSON.stringify(itinerary));
+    renderDay(dayNum);
+  }
+}
+
+function resetItinerary() {
+  if (confirm('Adakah anda mahu mengembalikan itinerari kepada asal? Semua perubahan akan hilang.')) {
+    itinerary = JSON.parse(JSON.stringify(defaultItinerary));
+    localStorage.removeItem('cameron_itinerary');
+    renderDay(currentDay);
+  }
+}
+
+function showDay(day) {
+  currentDay = day;
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('tab-active', btn.dataset.day == day);
+    btn.classList.toggle('text-gray-500', btn.dataset.day != day);
+  });
+  renderDay(day);
+}
+
+function getTypeColor(type) {
+  const colors = { travel: '#6366f1', hotel: '#f59e0b', food: '#ef4444', visit: '#10b981' };
+  return colors[type] || '#6b7280';
+}
+
+function renderDay(dayNum) {
+  const data = itinerary.find(d => d.day === dayNum);
+  const container = document.getElementById('content');
+  
+  let html = `
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="font-heading text-2xl text-gray-800">${data.title}</h2>
+      ${isEditMode ? `<button onclick="addItem(${dayNum})" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-md flex items-center gap-1"><i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Tambah Slot</button>` : ''}
+    </div>
+    <div class="space-y-6">`;
+
+  data.items.forEach((item, i) => {
+    const color = getTypeColor(item.type);
+    
+    if (isEditMode) {
+      // MOD SUNTING
+      html += `
+      <div class="bg-white border-2 border-dashed border-green-200 rounded-xl p-4 fade-in">
+        <div class="flex justify-between mb-2">
+          <span class="text-xs font-bold text-green-700">Masa:</span>
+          <button onclick="removeItem(${dayNum}, '${item.id}')" class="text-red-500"><i data-lucide="trash-2" style="width:16px;height:16px;"></i></button>
+        </div>
+        <input type="time" class="edit-input font-bold" value="${item.time}" onchange="updateItem(${dayNum}, '${item.id}', 'time', this.value)">
+        <input type="text" class="edit-input font-semibold" placeholder="Tajuk Tempat" value="${item.title}" onchange="updateItem(${dayNum}, '${item.id}', 'title', this.value)">
+        <textarea class="edit-input text-gray-600" placeholder="Deskripsi" onchange="updateItem(${dayNum}, '${item.id}', 'desc', this.value)">${item.desc}</textarea>
+        <input type="text" class="edit-input text-blue-600" placeholder="Link Waze (Optional)" value="${item.waze || ''}" onchange="updateItem(${dayNum}, '${item.id}', 'waze', this.value)">
+      </div>`;
+    } else {
+      // MOD LIHAT (View Mode)
+      const wazeBtn = item.waze ? `<a href="${item.waze}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full text-white bg-green-700 hover:bg-green-800 transition"><i data-lucide="navigation" style="width:12px;height:12px;"></i> Waze</a>` : '';
+      
+      html += `
+      <div class="day-card flex gap-4 fade-in" style="animation-delay:${i*50}ms">
+        <div class="flex flex-col items-center pt-1">
+          <div class="timeline-dot" style="background:${color};"></div>
+          ${i < data.items.length-1 ? `<div class="timeline-line" style="background:${color}20;"></div>` : ''}
+        </div>
+        <div class="flex-1 bg-white rounded-2xl overflow-hidden shadow-md border border-gray-100">
+          <img src="${item.image}" alt="${item.title}" class="w-full h-40 object-cover">
+          <div class="p-4">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs font-bold text-white px-2 py-0.5 rounded bg-gray-800">${item.time}</span>
+                  <i data-lucide="${item.icon}" style="width:16px;height:16px;color:${color};"></i>
+                </div>
+                <h3 class="font-bold text-gray-900 text-lg">${item.title}</h3>
+                <p class="text-sm text-gray-600 mt-1 leading-relaxed">${item.desc}</p>
+              </div>
+              <div class="shrink-0">${wazeBtn}</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+  lucide.createIcons();
+}
+
+// Initial Load
+showDay(1);
+</script>
+ </body>
+</html>
